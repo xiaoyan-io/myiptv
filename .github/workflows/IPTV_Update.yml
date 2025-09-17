@@ -13,17 +13,16 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-
+      with:
+        token: ${{ secrets.GH_TOKEN }}
     - name: GetTime
       run: echo "DATE=$(date +'%Y-%m-%d %H:%M:%S CST')" >> $GITHUB_ENV
-
     - name: IPTV Source Update
       run: |
         rm -f CCTV.m3u && wget https://raw.githubusercontent.com/fanmingming/live/main/tv/m3u/ipv6.m3u -O CCTV.m3u
         sed -i -n '/央视频道/,+1p' CCTV.m3u
         sed -i '1i #EXTM3U' CCTV.m3u
         sed -i '/^\s*$/d' CCTV.m3u
-
         rm -f CNTV.m3u && touch CNTV.m3u
         wget https://raw.githubusercontent.com/fanmingming/live/main/tv/m3u/ipv6.m3u -O CNTV1.m3u && sed -i -n '/卫视频道/,+1p' CNTV1.m3u
         wget https://raw.githubusercontent.com/fanmingming/live/main/tv/m3u/ipv6.m3u -O CNTV2.m3u && sed -i -n '/数字频道/,+1p' CNTV2.m3u
@@ -32,21 +31,11 @@ jobs:
         rm -f CNTV1.m3u CNTV2.m3u
         sed -i '1i #EXTM3U' CNTV.m3u
         sed -i '/^\s*$/d' CNTV.m3u
-
         rm -f IPTV.m3u && touch IPTV.m3u
         cat CCTV.m3u >> IPTV.m3u
         cat CNTV.m3u >> IPTV.m3u
-        sed -i '/#EXTM3U/d' IPTV.m3u
-        sed -i '1i #EXTM3U' IPTV.m3u
-        sed -i '/^\s*$/d' IPTV.m3u
-
-        rm -f EPG.xml && wget https://epg.112114.xyz/pp.xml -O EPG.xml
-        echo "Auto Update IPTV(ipv6) in $DATE, 基于Moexin/IPTV项目修改, 国内直播源同步fanmingming/live" > README.md
-
-    - name: Commit and Push
-      run: |
-        git config --local user.email "github-actions[bot]@users.noreply.github.com"
-        git config --local user.name "github-actions[bot]"
+        rm -f CCTV.m3u CNTV.m3u
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
         git add .
-        git commit -m "$DATE" || echo "No changes to commit"
-        git push
+        git diff --quiet && git diff --staged --quiet || (git commit -m "Updated at ${{ env.DATE }}" && git push https://xiaoyan-io:${{ secrets.GH_TOKEN }}@github.com/xiaoyan-io/myiptv.git HEAD:main)
