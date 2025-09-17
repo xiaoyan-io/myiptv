@@ -1,85 +1,37 @@
-name: Update
-on:
-  watch:
-    types: [started]
-  schedule:
-    - cron: 0,30 * * * *
-  workflow_dispatch:
-env:
-  TZ: Asia/Shanghai
-jobs:
-  Update:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        token: ${{ secrets.GH_TOKEN }}
-    - name: GetTime
-      run: echo "DATE=$(date +'%Y-%m-%d %H:%M:%S CST')" >> $GITHUB_ENV
-    - name: IPTV Source Update
-      run: |
-        # Download Myanmar channels
-        rm -f Myanmar.m3u && wget https://raw.githubusercontent.com/dtankdempse/free-iptv/main/playlist/mm.m3u -O Myanmar.m3u
-        sed -i '1i #EXTM3U' Myanmar.m3u
-        sed -i '/^\s*$/d' Myanmar.m3u
-        
-        # Download Phoenix channels
-        rm -f Phoenix.m3u && wget https://raw.githubusercontent.com/dtankdempse/free-iptv/main/playlist/hk.m3u -O Phoenix.m3u
-        sed -i '1i #EXTM3U' Phoenix.m3u
-        sed -i '/^\s*$/d' Phoenix.m3u
-        
-        # Download Sports channels
-        rm -f Sports.m3u && wget https://raw.githubusercontent.com/Free-TV/IPTV/master/playlists/playlist_sports.m3u8 -O Sports.m3u
-        if [ -f Sports.m3u ]; then
-          # Add header if not present
-          if ! grep -q "#EXTM3U" Sports.m3u; then
-            sed -i '1i #EXTM3U' Sports.m3u
-          fi
-          sed -i '/^\s*$/d' Sports.m3u
-        fi
-        
-        # Download Golf channels (alternative sports source)
-        rm -f Golf.m3u && wget https://raw.githubusercontent.com/dtankdempse/free-iptv/main/playlist/sports.m3u -O Golf.m3u
-        if [ -f Golf.m3u ]; then
-          # Add header if not present
-          if ! grep -q "#EXTM3U" Golf.m3u; then
-            sed -i '1i #EXTM3U' Golf.m3u
-          fi
-          sed -i '/^\s*$/d' Golf.m3u
-        fi
-        
-        # Create combined IPTV.m3u
-        rm -f IPTV.m3u && touch IPTV.m3u
-        echo '#EXTM3U' > IPTV.m3u
-        
-        # Merge Myanmar channels
-        if [ -f Myanmar.m3u ]; then
-          sed '1d' Myanmar.m3u >> IPTV.m3u
-        fi
-        
-        # Merge Phoenix channels
-        if [ -f Phoenix.m3u ]; then
-          sed '1d' Phoenix.m3u >> IPTV.m3u
-        fi
-        
-        # Merge Sports channels
-        if [ -f Sports.m3u ]; then
-          sed '1d' Sports.m3u >> IPTV.m3u
-        fi
-        
-        # Merge Golf channels
-        if [ -f Golf.m3u ]; then
-          sed '1d' Golf.m3u >> IPTV.m3u
-        fi
-        
-        # Clean up temporary files
-        rm -f Myanmar.m3u Phoenix.m3u Sports.m3u Golf.m3u
-        
-        # Remove empty lines
-        sed -i '/^\s*$/d' IPTV.m3u
-        
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add .
-        git diff --quiet && git diff --staged --quiet || (git commit -m "Updated at ${{ env.DATE }}" && git push https://xiaoyan-io:${{ secrets.GH_TOKEN }}@github.com/xiaoyan-io/myiptv.git HEAD:main)
+- name: IPTV Source Update
+  run: |
+    # 缅甸频道（iptv-org，稳定）
+    rm -f Myanmar.m3u && wget https://iptv-org.github.io/iptv/countries/mm.m3u -O Myanmar.m3u
+    sed -i '1i #EXTM3U' Myanmar.m3u
+    sed -i '/^\s*$/d' Myanmar.m3u
+
+    # 凤凰频道（暂用娱乐频道类，iptv-org无单独凤凰，常用港台娱乐全部包含）
+    rm -f Phoenix.m3u && wget https://iptv-org.github.io/iptv/categories/entertainment.m3u -O Phoenix.m3u
+    sed -i '1i #EXTM3U' Phoenix.m3u
+    sed -i '/^\s*$/d' Phoenix.m3u
+
+    # 体育频道（全球可用，含各类球赛）
+    rm -f Sports.m3u && wget https://iptv-org.github.io/iptv/categories/sports.m3u -O Sports.m3u
+    sed -i '1i #EXTM3U' Sports.m3u
+    sed -i '/^\s*$/d' Sports.m3u
+
+    # 高尔夫频道（部分球赛和golf内容）
+    rm -f Golf.m3u && wget https://iptv-org.github.io/iptv/categories/golf.m3u -O Golf.m3u
+    sed -i '1i #EXTM3U' Golf.m3u
+    sed -i '/^\s*$/d' Golf.m3u
+
+    # 合并所有频道
+    rm -f IPTV.m3u && touch IPTV.m3u
+    echo '#EXTM3U' > IPTV.m3u
+    for src in Myanmar.m3u Phoenix.m3u Sports.m3u Golf.m3u; do
+      if [ -f "$src" ]; then sed '1d' "$src" >> IPTV.m3u; fi
+    done
+
+    # 清理临时文件，去除空行
+    rm -f Myanmar.m3u Phoenix.m3u Sports.m3u Golf.m3u
+    sed -i '/^\s*$/d' IPTV.m3u
+
+    git config --local user.email "action@github.com"
+    git config --local user.name "GitHub Action"
+    git add .
+    git diff --quiet && git diff --staged --quiet || (git commit -m "Updated at ${{ env.DATE }}" && git push https://xiaoyan-io:${{ secrets.GH_TOKEN }}@github.com/xiaoyan-io/myiptv.git HEAD:main)
