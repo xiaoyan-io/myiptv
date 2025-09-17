@@ -29,6 +29,26 @@ jobs:
         sed -i '1i #EXTM3U' Phoenix.m3u
         sed -i '/^\s*$/d' Phoenix.m3u
         
+        # Download Sports channels
+        rm -f Sports.m3u && wget https://raw.githubusercontent.com/Free-TV/IPTV/master/playlists/playlist_sports.m3u8 -O Sports.m3u
+        if [ -f Sports.m3u ]; then
+          # Add header if not present
+          if ! grep -q "#EXTM3U" Sports.m3u; then
+            sed -i '1i #EXTM3U' Sports.m3u
+          fi
+          sed -i '/^\s*$/d' Sports.m3u
+        fi
+        
+        # Download Golf channels (alternative sports source)
+        rm -f Golf.m3u && wget https://raw.githubusercontent.com/dtankdempse/free-iptv/main/playlist/sports.m3u -O Golf.m3u
+        if [ -f Golf.m3u ]; then
+          # Add header if not present
+          if ! grep -q "#EXTM3U" Golf.m3u; then
+            sed -i '1i #EXTM3U' Golf.m3u
+          fi
+          sed -i '/^\s*$/d' Golf.m3u
+        fi
+        
         # Create combined IPTV.m3u
         rm -f IPTV.m3u && touch IPTV.m3u
         echo '#EXTM3U' > IPTV.m3u
@@ -43,8 +63,18 @@ jobs:
           sed '1d' Phoenix.m3u >> IPTV.m3u
         fi
         
+        # Merge Sports channels
+        if [ -f Sports.m3u ]; then
+          sed '1d' Sports.m3u >> IPTV.m3u
+        fi
+        
+        # Merge Golf channels
+        if [ -f Golf.m3u ]; then
+          sed '1d' Golf.m3u >> IPTV.m3u
+        fi
+        
         # Clean up temporary files
-        rm -f Myanmar.m3u Phoenix.m3u
+        rm -f Myanmar.m3u Phoenix.m3u Sports.m3u Golf.m3u
         
         # Remove empty lines
         sed -i '/^\s*$/d' IPTV.m3u
